@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -9,7 +9,21 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
+// Gluestack UI Components
+import { Center } from './ui';
+
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// Gluestack Design Tokens
+const colors = {
+  primary500: '#3b82f6',
+  secondary500: '#6366f1',
+  success500: '#22c55e',
+  info500: '#06b6d4',
+  purple500: '#8b5cf6',
+  emerald500: '#10b981',
+  outline200: '#e5e7eb',
+};
 
 interface BreathingCircleProps {
   size?: number;
@@ -74,27 +88,28 @@ const BreathingCircle: React.FC<BreathingCircleProps> = ({
     strokeDashoffset: strokeOffset.value,
   }));
 
+  // Phase colors using Gluestack design tokens
   const getPhaseColor = () => {
-    const colors: Record<string, string> = {
-      idle: '#6366f1',
-      hyperventilation: '#3b82f6',
-      'breath-hold': '#8b5cf6',
-      exhale: '#06b6d4',
-      'deep-breaths': '#10b981',
-      complete: '#22c55e',
+    const phaseColors: Record<string, string> = {
+      idle: colors.secondary500,        // Indigo
+      hyperventilation: colors.primary500, // Blue
+      'breath-hold': colors.purple500,     // Purple
+      exhale: colors.info500,              // Cyan
+      'deep-breaths': colors.emerald500,   // Emerald
+      complete: colors.success500,         // Green
     };
-    return colors[phase] || colors.idle;
+    return phaseColors[phase] || phaseColors.idle;
   };
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <Center style={[styles.container, { width: size, height: size }]}>
       <Svg width={size} height={size}>
         {/* Background circle */}
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#e5e7eb"
+          stroke={colors.outline200}
           strokeWidth="8"
           fill="none"
         />
@@ -126,14 +141,14 @@ const BreathingCircle: React.FC<BreathingCircleProps> = ({
           animatedProps={animatedCircleProps}
         />
       </Svg>
-    </View>
+    </Center>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignSelf: 'center',
+    marginVertical: 20,
   },
 });
 

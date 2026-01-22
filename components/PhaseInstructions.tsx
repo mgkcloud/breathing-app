@@ -1,6 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { PHASE_COLORS, PHASE_INSTRUCTIONS } from '../constants/config';
+
+// Gluestack UI Components
+import { VStack, Text, Heading, Badge, BadgeText, Center } from './ui';
 
 interface PhaseInstructionsProps {
   phase: string;
@@ -37,65 +40,69 @@ const PhaseInstructions: React.FC<PhaseInstructionsProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const phaseColor = PHASE_COLORS[phase as keyof typeof PHASE_COLORS] || '#6366f1';
+
   return (
-    <View style={styles.container}>
-      <Text style={[styles.roundIndicator, { color: PHASE_COLORS[phase as keyof typeof PHASE_COLORS] }]}>
-        Round {currentRound} of {totalRounds}
-      </Text>
+    <Center style={styles.container}>
+      <VStack space="sm" style={styles.content}>
+        {/* Round indicator */}
+        <Badge action="muted" size="md" style={styles.roundBadge}>
+          <BadgeText style={{ color: phaseColor }}>
+            Round {currentRound} of {totalRounds}
+          </BadgeText>
+        </Badge>
 
-      <Text style={[styles.phaseTitle, { color: PHASE_COLORS[phase as keyof typeof PHASE_COLORS] }]}>
-        {getPhaseTitle()}
-      </Text>
+        {/* Phase title */}
+        <Heading size="2xl" style={[styles.phaseTitle, { color: phaseColor }]}>
+          {getPhaseTitle()}
+        </Heading>
 
-      <Text style={styles.instruction}>
-        {PHASE_INSTRUCTIONS[phase as keyof typeof PHASE_INSTRUCTIONS]}
-      </Text>
-
-      {timer !== undefined && timer > 0 && (
-        <Text style={[styles.timer, { color: PHASE_COLORS[phase as keyof typeof PHASE_COLORS] }]}>
-          {formatTime(timer)}
+        {/* Instruction text */}
+        <Text size="md" style={styles.instruction}>
+          {PHASE_INSTRUCTIONS[phase as keyof typeof PHASE_INSTRUCTIONS]}
         </Text>
-      )}
 
-      {breathCount !== undefined && targetBreaths !== undefined && (
-        <Text style={styles.counter}>
-          Breath {breathCount} / {targetBreaths}
-        </Text>
-      )}
-    </View>
+        {/* Timer display */}
+        {timer !== undefined && timer > 0 && (
+          <Text size="6xl" bold style={[styles.timer, { color: phaseColor }]}>
+            {formatTime(timer)}
+          </Text>
+        )}
+
+        {/* Breath counter */}
+        {breathCount !== undefined && targetBreaths !== undefined && (
+          <Text size="lg" style={styles.counter}>
+            Breath {breathCount} / {targetBreaths}
+          </Text>
+        )}
+      </VStack>
+    </Center>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
     paddingVertical: 20,
   },
-  roundIndicator: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  content: {
+    alignItems: 'center',
+  },
+  roundBadge: {
+    marginBottom: 4,
+    backgroundColor: '#f3f4f6',
   },
   phaseTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    textAlign: 'center',
   },
   instruction: {
-    fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 20,
   },
   timer: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    marginTop: 8,
   },
   counter: {
-    fontSize: 18,
     color: '#6b7280',
     fontWeight: '500',
   },

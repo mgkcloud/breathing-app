@@ -1,9 +1,35 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
 import BreathingCircle from './BreathingCircle';
 import PhaseInstructions from './PhaseInstructions';
 import { useBreathingSession } from '../hooks/useBreathingSession';
+import { useHealthKit } from '../hooks/useHealthKit';
 import { DEFAULT_CONFIG } from '../constants/config';
+
+// Gluestack UI Components
+import {
+  Box,
+  VStack,
+  HStack,
+  Center,
+  Text,
+  Heading,
+  Button,
+  ButtonText,
+  Input,
+  InputField,
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Badge,
+  BadgeText,
+  Pressable,
+  WatchIcon,
+  HeartIcon,
+} from './ui';
 
 const BreathingProtocol: React.FC = () => {
   const {
@@ -15,9 +41,20 @@ const BreathingProtocol: React.FC = () => {
     completeDeepBreaths,
     resetSession,
     togglePause,
-    handleHeartRateSubmit,
-    handleO2Submit,
+    handleHeartRateSubmit: submitHeartRate,
+    handleO2Submit: submitO2,
   } = useBreathingSession(DEFAULT_CONFIG);
+
+  // HealthKit integration
+  const {
+    heartRate: liveHeartRate,
+    o2Saturation: liveO2,
+    isAuthorized: healthKitAuthorized,
+    isAvailable: healthKitAvailable,
+    requestAuthorization,
+    getLatestHeartRate,
+    getLatestO2,
+  } = useHealthKit(sessionState.phase !== 'idle' && sessionState.phase !== 'complete');
 
   const [showHeartRateModal, setShowHeartRateModal] = useState(false);
   const [showO2Modal, setShowO2Modal] = useState(false);
@@ -25,6 +62,7 @@ const BreathingProtocol: React.FC = () => {
   const [o2Input, setO2Input] = useState('');
   const [breathHoldTimer, setBreathHoldTimer] = useState(0);
   const [exhaleTimer, setExhaleTimer] = useState(0);
+  const [useAppleWatch, setUseAppleWatch] = useState(true);
 
   const breathIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const breathHoldIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,13 +73,31 @@ const BreathingProtocol: React.FC = () => {
     if (sessionState.phase === 'hyperventilation' && !sessionState.isPaused) {
       breathIntervalRef.current = setInterval(() => {
         recordBreath();
-      }, 2000); // One breath every 2 seconds
+      }, 2000);
 
       return () => {
         if (breathIntervalRef.current) clearInterval(breathIntervalRef.current);
       };
     }
   }, [sessionState.phase, sessionState.isPaused, recordBreath]);
+
+  // Handle breath hold completion
+  const handleBreathHoldComplete = useCallback(async () => {
+    if (breathHoldIntervalRef.current) {
+      clearInterval(breathHoldIntervalRef.current);
+    }
+
+    if (useAppleWatch && healthKitAuthorized) {
+      const hr = await getLatestHeartRate();
+      if (hr && hr >= 30 && hr <= 220) {
+        submitHeartRate(hr);
+        releaseBreathHold(breathHoldTimer);
+        return;
+      }
+    }
+
+    setShowHeartRateModal(true);
+  }, [useAppleWatch, healthKitAuthorized, getLatestHeartRate, submitHeartRate, releaseBreathHold, breathHoldTimer]);
 
   // Breath hold timer
   useEffect(() => {
@@ -51,11 +107,7 @@ const BreathingProtocol: React.FC = () => {
         setBreathHoldTimer(prev => {
           const newTime = prev + 1;
           if (newTime >= sessionState.breathHoldTarget) {
-            // Show heart rate prompt
-            setShowHeartRateModal(true);
-            if (breathHoldIntervalRef.current) {
-              clearInterval(breathHoldIntervalRef.current);
-            }
+            handleBreathHoldComplete();
             return newTime;
           }
           return newTime;
@@ -66,7 +118,7 @@ const BreathingProtocol: React.FC = () => {
         if (breathHoldIntervalRef.current) clearInterval(breathHoldIntervalRef.current);
       };
     }
-  }, [sessionState.phase, sessionState.isPaused, sessionState.breathHoldTarget]);
+  }, [sessionState.phase, sessionState.isPaused, sessionState.breathHoldTarget, handleBreathHoldComplete]);
 
   // Exhale timer
   useEffect(() => {
@@ -92,7 +144,24 @@ const BreathingProtocol: React.FC = () => {
     }
   }, [sessionState.phase, sessionState.isPaused, completeExhale]);
 
-  const handleStart = () => {
+  // Auto-submit O2 from Apple Watch
+  useEffect(() => {
+    if (useAppleWatch && healthKitAuthorized && liveO2 && liveO2 >= 70 && liveO2 <= 100) {
+      submitO2(liveO2);
+    }
+  }, [liveO2, useAppleWatch, healthKitAuthorized, submitO2]);
+
+  const handleStart = async () => {
+    if (healthKitAvailable && !healthKitAuthorized && useAppleWatch) {
+      const authorized = await requestAuthorization();
+      if (!authorized) {
+        Alert.alert(
+          'Apple Watch',
+          'HealthKit access denied. You can still enter values manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
     startHyperventilation();
   };
 
@@ -102,19 +171,19 @@ const BreathingProtocol: React.FC = () => {
       Alert.alert('Invalid Heart Rate', 'Please enter a valid heart rate (30-220)');
       return;
     }
-    handleHeartRateSubmit(hr);
+    submitHeartRate(hr);
     setHeartRateInput('');
     setShowHeartRateModal(false);
     releaseBreathHold(breathHoldTimer);
   };
 
-  const handleO2Submit = () => {
+  const handleO2SubmitLocal = () => {
     const o2 = parseInt(o2Input);
     if (isNaN(o2) || o2 < 70 || o2 > 100) {
       Alert.alert('Invalid O2 Level', 'Please enter a valid O2 saturation (70-100)');
       return;
     }
-    handleO2Submit(o2);
+    submitO2(o2);
     setO2Input('');
     setShowO2Modal(false);
   };
@@ -129,13 +198,76 @@ const BreathingProtocol: React.FC = () => {
     return 0;
   };
 
+  const toggleAppleWatch = async () => {
+    if (!useAppleWatch && healthKitAvailable && !healthKitAuthorized) {
+      const authorized = await requestAuthorization();
+      if (authorized) {
+        setUseAppleWatch(true);
+      }
+    } else {
+      setUseAppleWatch(!useAppleWatch);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <Box style={styles.container}>
+      {/* Apple Watch Status Badge */}
+      {healthKitAvailable && (
+        <Pressable onPress={toggleAppleWatch}>
+          <Center style={styles.watchStatusContainer}>
+            <HStack space="sm" style={styles.watchStatus}>
+              <WatchIcon
+                color={useAppleWatch && healthKitAuthorized ? '#22c55e' : '#9ca3af'}
+                width={20}
+                height={20}
+              />
+              <Text
+                size="sm"
+                style={{
+                  color: useAppleWatch && healthKitAuthorized ? '#22c55e' : '#9ca3af',
+                  fontWeight: '500',
+                }}
+              >
+                {useAppleWatch && healthKitAuthorized ? 'Apple Watch Connected' :
+                 useAppleWatch ? 'Tap to Connect' : 'Manual Mode'}
+              </Text>
+            </HStack>
+          </Center>
+        </Pressable>
+      )}
+
+      {/* Live Health Data Display */}
+      {useAppleWatch && healthKitAuthorized && sessionState.phase !== 'idle' && (
+        <Box style={styles.healthDataContainer}>
+          <HStack space="xl" style={styles.healthDataRow}>
+            <VStack style={styles.healthDataItem}>
+              <Text size="xs" style={styles.healthDataLabel}>HR</Text>
+              <Heading size="2xl" style={styles.healthDataValue}>
+                {liveHeartRate ? `${liveHeartRate}` : '--'}
+              </Heading>
+              <Text size="xs" style={styles.healthDataUnit}>BPM</Text>
+            </VStack>
+
+            <View style={styles.healthDivider} />
+
+            <VStack style={styles.healthDataItem}>
+              <Text size="xs" style={styles.healthDataLabel}>SpO₂</Text>
+              <Heading size="2xl" style={styles.healthDataValue}>
+                {liveO2 ? `${liveO2}` : '--'}
+              </Heading>
+              <Text size="xs" style={styles.healthDataUnit}>%</Text>
+            </VStack>
+          </HStack>
+        </Box>
+      )}
+
+      {/* Breathing Circle */}
       <BreathingCircle
         phase={sessionState.phase}
         progress={getProgress()}
       />
 
+      {/* Phase Instructions */}
       <PhaseInstructions
         phase={sessionState.phase}
         currentRound={sessionState.currentRound}
@@ -146,11 +278,12 @@ const BreathingProtocol: React.FC = () => {
                sessionState.phase === 'exhale' ? exhaleTimer : undefined}
       />
 
-      <View style={styles.buttonContainer}>
+      {/* Action Buttons */}
+      <HStack space="md" style={styles.buttonContainer}>
         {sessionState.phase === 'idle' && (
-          <TouchableOpacity style={[styles.button, styles.startButton]} onPress={handleStart}>
-            <Text style={styles.buttonText}>Start Session</Text>
-          </TouchableOpacity>
+          <Button action="primary" size="lg" onPress={handleStart} style={styles.primaryButton}>
+            <ButtonText>Start Session</ButtonText>
+          </Button>
         )}
 
         {(sessionState.phase === 'hyperventilation' ||
@@ -158,72 +291,112 @@ const BreathingProtocol: React.FC = () => {
           sessionState.phase === 'exhale' ||
           sessionState.phase === 'deep-breaths') && (
           <>
-            <TouchableOpacity style={[styles.button, styles.pauseButton]} onPress={togglePause}>
-              <Text style={styles.buttonText}>
-                {sessionState.isPaused ? 'Resume' : 'Pause'}
-              </Text>
-            </TouchableOpacity>
+            <Button
+              action={sessionState.isPaused ? 'positive' : 'secondary'}
+              size="md"
+              onPress={togglePause}
+              style={styles.actionButton}
+            >
+              <ButtonText>{sessionState.isPaused ? 'Resume' : 'Pause'}</ButtonText>
+            </Button>
 
-            <TouchableOpacity style={[styles.button, styles.o2Button]} onPress={() => setShowO2Modal(true)}>
-              <Text style={styles.buttonText}>O₂ Level</Text>
-            </TouchableOpacity>
+            {(!useAppleWatch || !healthKitAuthorized) && (
+              <Button
+                action="default"
+                variant="outline"
+                size="md"
+                onPress={() => setShowO2Modal(true)}
+                style={[styles.actionButton, styles.o2Button]}
+              >
+                <ButtonText style={{ color: '#8b5cf6' }}>O₂ Level</ButtonText>
+              </Button>
+            )}
 
-            <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetSession}>
-              <Text style={styles.buttonText}>Reset</Text>
-            </TouchableOpacity>
+            <Button
+              action="negative"
+              size="md"
+              onPress={resetSession}
+              style={styles.actionButton}
+            >
+              <ButtonText>Reset</ButtonText>
+            </Button>
           </>
         )}
 
         {sessionState.phase === 'complete' && (
-          <TouchableOpacity style={[styles.button, styles.startButton]} onPress={resetSession}>
-            <Text style={styles.buttonText}>New Session</Text>
-          </TouchableOpacity>
+          <Button action="primary" size="lg" onPress={resetSession} style={styles.primaryButton}>
+            <ButtonText>New Session</ButtonText>
+          </Button>
         )}
-      </View>
+      </HStack>
 
       {/* Heart Rate Modal */}
-      <Modal visible={showHeartRateModal} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter Heart Rate</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="number-pad"
-              value={heartRateInput}
-              onChangeText={setHeartRateInput}
-              placeholder="BPM"
-              autoFocus
-            />
-            <TouchableOpacity style={[styles.button, styles.modalButton]} onPress={handleHeartRateSubmit}>
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <Modal isOpen={showHeartRateModal} onClose={() => setShowHeartRateModal(false)} size="sm">
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Enter Heart Rate</Heading>
+          </ModalHeader>
+          <ModalBody>
+            <VStack space="md">
+              <Text size="sm" style={styles.modalSubtitle}>
+                {healthKitAvailable ? 'Apple Watch data not available' : 'Manual entry required'}
+              </Text>
+              <Input size="lg">
+                <InputField
+                  keyboardType="number-pad"
+                  value={heartRateInput}
+                  onChangeText={setHeartRateInput}
+                  placeholder="BPM"
+                  style={styles.inputField}
+                />
+              </Input>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button action="primary" onPress={handleHeartRateSubmit} style={{ flex: 1 }}>
+              <ButtonText>Submit</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
 
       {/* O2 Modal */}
-      <Modal visible={showO2Modal} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter O₂ Saturation</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="number-pad"
-              value={o2Input}
-              onChangeText={setO2Input}
-              placeholder="%"
-              autoFocus
-            />
-            <TouchableOpacity style={[styles.button, styles.modalButton]} onPress={handleO2Submit}>
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.modalButton, styles.cancelButton]} onPress={() => setShowO2Modal(false)}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <Modal isOpen={showO2Modal} onClose={() => setShowO2Modal(false)} size="sm">
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="lg">Enter O₂ Saturation</Heading>
+          </ModalHeader>
+          <ModalBody>
+            <Input size="lg">
+              <InputField
+                keyboardType="number-pad"
+                value={o2Input}
+                onChangeText={setO2Input}
+                placeholder="%"
+                style={styles.inputField}
+              />
+            </Input>
+          </ModalBody>
+          <ModalFooter>
+            <HStack space="md" style={{ flex: 1 }}>
+              <Button
+                action="secondary"
+                variant="outline"
+                onPress={() => setShowO2Modal(false)}
+                style={{ flex: 1 }}
+              >
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button action="primary" onPress={handleO2SubmitLocal} style={{ flex: 1 }}>
+                <ButtonText>Submit</ButtonText>
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
-    </View>
+    </Box>
   );
 };
 
@@ -233,72 +406,71 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     padding: 20,
   },
+  watchStatusContainer: {
+    marginBottom: 12,
+  },
+  watchStatus: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 20,
+  },
+  healthDataContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  healthDataRow: {
+    justifyContent: 'center',
+  },
+  healthDataItem: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  healthDataLabel: {
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  healthDataValue: {
+    color: '#1f2937',
+  },
+  healthDataUnit: {
+    color: '#9ca3af',
+  },
+  healthDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 16,
+  },
   buttonContainer: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
     marginTop: 20,
   },
-  button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  primaryButton: {
+    minWidth: 200,
     borderRadius: 12,
-    minWidth: 120,
-    alignItems: 'center',
   },
-  startButton: {
-    backgroundColor: '#3b82f6',
-  },
-  pauseButton: {
-    backgroundColor: '#f59e0b',
-  },
-  resetButton: {
-    backgroundColor: '#ef4444',
+  actionButton: {
+    minWidth: 100,
+    borderRadius: 12,
   },
   o2Button: {
-    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
   },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+  modalSubtitle: {
+    color: '#6b7280',
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    padding: 24,
-    borderRadius: 16,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 18,
+  inputField: {
     textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalButton: {
-    backgroundColor: '#3b82f6',
-    width: '100%',
-  },
-  cancelButton: {
-    backgroundColor: '#6b7280',
-    marginTop: 8,
+    fontSize: 24,
   },
 });
 

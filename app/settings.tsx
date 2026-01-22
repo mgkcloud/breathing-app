@@ -1,13 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { loadConfig, saveConfig } from '../utils/storage';
 import { BreathingConfig } from '../types/breathing';
 import { DEFAULT_CONFIG } from '../constants/config';
+import { useHealthKit } from '../hooks/useHealthKit';
+
+// Gluestack UI Components
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Heading,
+  Button,
+  ButtonText,
+  Input,
+  InputField,
+  Pressable,
+  Divider,
+  Badge,
+  BadgeText,
+  ChevronLeftIcon,
+  WatchIcon,
+  HeartIcon,
+  CheckIcon,
+} from '../components/ui';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [config, setConfig] = useState<Partial<BreathingConfig>>({});
+
+  const {
+    isAvailable: healthKitAvailable,
+    isAuthorized: healthKitAuthorized,
+    requestAuthorization,
+    error: healthKitError,
+  } = useHealthKit(false);
 
   useEffect(() => {
     loadSettings();
@@ -23,72 +52,188 @@ export default function SettingsScreen() {
     router.back();
   };
 
+  const handleConnectWatch = async () => {
+    if (!healthKitAvailable) {
+      Alert.alert(
+        'Not Available',
+        'HealthKit is not available on this device. Make sure you\'re running on a real iOS device.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const authorized = await requestAuthorization();
+    if (authorized) {
+      Alert.alert('Connected', 'Apple Watch is now connected. Heart rate and O2 data will be automatically captured during sessions.');
+    } else {
+      Alert.alert(
+        'Permission Denied',
+        'Please enable HealthKit access in Settings > Privacy > Health > Breathing App',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveButton}>Save</Text>
-        </TouchableOpacity>
-      </View>
+    <Box style={styles.container}>
+      {/* Header */}
+      <HStack style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <HStack space="xs">
+            <ChevronLeftIcon color="#3b82f6" width={20} height={20} />
+            <Text style={styles.backText}>Back</Text>
+          </HStack>
+        </Pressable>
+        <Heading size="lg">Settings</Heading>
+        <Button action="primary" variant="link" onPress={handleSave}>
+          <ButtonText>Save</ButtonText>
+        </Button>
+      </HStack>
 
-      <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Session Configuration</Text>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <VStack space="lg" style={styles.content}>
+          {/* Apple Watch Section */}
+          {Platform.OS === 'ios' && (
+            <>
+              <VStack space="md">
+                <Heading size="md" style={styles.sectionTitle}>Apple Watch</Heading>
 
-        <View style={styles.setting}>
-          <Text style={styles.label}>Total Rounds</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={config.totalRounds?.toString() || DEFAULT_CONFIG.totalRounds.toString()}
-            onChangeText={(text) => setConfig({ ...config, totalRounds: parseInt(text) || DEFAULT_CONFIG.totalRounds })}
-          />
-        </View>
+                <Box style={styles.card}>
+                  <VStack space="md">
+                    <HStack style={styles.watchRow}>
+                      <HStack space="md" style={styles.watchInfo}>
+                        <WatchIcon
+                          color={healthKitAuthorized ? '#22c55e' : '#6b7280'}
+                          width={24}
+                          height={24}
+                        />
+                        <VStack>
+                          <Text bold style={styles.cardLabel}>HealthKit Connection</Text>
+                          <Text
+                            size="sm"
+                            style={{
+                              color: healthKitAuthorized ? '#22c55e' :
+                                     healthKitAvailable ? '#f59e0b' : '#ef4444'
+                            }}
+                          >
+                            {healthKitAuthorized ? 'Connected' :
+                             healthKitAvailable ? 'Not Connected' :
+                             'Not Available'}
+                          </Text>
+                        </VStack>
+                      </HStack>
 
-        <View style={styles.setting}>
-          <Text style={styles.label}>Hyperventilation Breaths</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={config.hyperventilationBreaths?.toString() || DEFAULT_CONFIG.hyperventilationBreaths.toString()}
-            onChangeText={(text) => setConfig({ ...config, hyperventilationBreaths: parseInt(text) || DEFAULT_CONFIG.hyperventilationBreaths })}
-          />
-        </View>
+                      <Button
+                        action={healthKitAuthorized ? 'positive' : 'primary'}
+                        size="sm"
+                        onPress={handleConnectWatch}
+                        isDisabled={healthKitAuthorized}
+                      >
+                        <ButtonText>
+                          {healthKitAuthorized ? 'Connected' : 'Connect'}
+                        </ButtonText>
+                      </Button>
+                    </HStack>
 
-        <View style={styles.setting}>
-          <Text style={styles.label}>Breath Hold Target (seconds)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={config.breathHoldTarget?.toString() || DEFAULT_CONFIG.breathHoldTarget.toString()}
-            onChangeText={(text) => setConfig({ ...config, breathHoldTarget: parseInt(text) || DEFAULT_CONFIG.breathHoldTarget })}
-          />
-        </View>
+                    <Text size="sm" style={styles.description}>
+                      {healthKitAuthorized
+                        ? 'Heart rate and O2 saturation will be automatically captured from your Apple Watch during breathing sessions.'
+                        : 'Connect your Apple Watch to automatically track heart rate and blood oxygen during breathing exercises.'}
+                    </Text>
 
-        <View style={styles.setting}>
-          <Text style={styles.label}>Exhale Duration (seconds)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={config.exhaleDuration?.toString() || DEFAULT_CONFIG.exhaleDuration.toString()}
-            onChangeText={(text) => setConfig({ ...config, exhaleDuration: parseInt(text) || DEFAULT_CONFIG.exhaleDuration })}
-          />
-        </View>
+                    {healthKitAuthorized && (
+                      <>
+                        <Divider />
+                        <HStack space="lg" style={styles.dataTypes}>
+                          <HStack space="sm">
+                            <HeartIcon color="#ef4444" width={18} height={18} />
+                            <Text size="sm" style={styles.dataTypeLabel}>Heart Rate</Text>
+                          </HStack>
+                          <HStack space="sm">
+                            <Text style={styles.lungIcon}>🫁</Text>
+                            <Text size="sm" style={styles.dataTypeLabel}>Blood Oxygen</Text>
+                          </HStack>
+                        </HStack>
+                      </>
+                    )}
+                  </VStack>
+                </Box>
+              </VStack>
+            </>
+          )}
 
-        <View style={styles.setting}>
-          <Text style={styles.label}>Deep Breaths Recovery</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={config.deepBreathsRecovery?.toString() || DEFAULT_CONFIG.deepBreathsRecovery.toString()}
-            onChangeText={(text) => setConfig({ ...config, deepBreathsRecovery: parseInt(text) || DEFAULT_CONFIG.deepBreathsRecovery })}
-          />
-        </View>
-      </View>
-    </View>
+          {/* Session Configuration */}
+          <VStack space="md">
+            <Heading size="md" style={styles.sectionTitle}>Session Configuration</Heading>
+
+            <Box style={styles.card}>
+              <VStack space="sm">
+                <Text size="sm" style={styles.inputLabel}>Total Rounds</Text>
+                <Input size="md">
+                  <InputField
+                    keyboardType="number-pad"
+                    value={config.totalRounds?.toString() || DEFAULT_CONFIG.totalRounds.toString()}
+                    onChangeText={(text) => setConfig({ ...config, totalRounds: parseInt(text) || DEFAULT_CONFIG.totalRounds })}
+                  />
+                </Input>
+              </VStack>
+            </Box>
+
+            <Box style={styles.card}>
+              <VStack space="sm">
+                <Text size="sm" style={styles.inputLabel}>Hyperventilation Breaths</Text>
+                <Input size="md">
+                  <InputField
+                    keyboardType="number-pad"
+                    value={config.hyperventilationBreaths?.toString() || DEFAULT_CONFIG.hyperventilationBreaths.toString()}
+                    onChangeText={(text) => setConfig({ ...config, hyperventilationBreaths: parseInt(text) || DEFAULT_CONFIG.hyperventilationBreaths })}
+                  />
+                </Input>
+              </VStack>
+            </Box>
+
+            <Box style={styles.card}>
+              <VStack space="sm">
+                <Text size="sm" style={styles.inputLabel}>Breath Hold Target (seconds)</Text>
+                <Input size="md">
+                  <InputField
+                    keyboardType="number-pad"
+                    value={config.breathHoldTarget?.toString() || DEFAULT_CONFIG.breathHoldTarget.toString()}
+                    onChangeText={(text) => setConfig({ ...config, breathHoldTarget: parseInt(text) || DEFAULT_CONFIG.breathHoldTarget })}
+                  />
+                </Input>
+              </VStack>
+            </Box>
+
+            <Box style={styles.card}>
+              <VStack space="sm">
+                <Text size="sm" style={styles.inputLabel}>Exhale Duration (seconds)</Text>
+                <Input size="md">
+                  <InputField
+                    keyboardType="number-pad"
+                    value={config.exhaleDuration?.toString() || DEFAULT_CONFIG.exhaleDuration.toString()}
+                    onChangeText={(text) => setConfig({ ...config, exhaleDuration: parseInt(text) || DEFAULT_CONFIG.exhaleDuration })}
+                  />
+                </Input>
+              </VStack>
+            </Box>
+
+            <Box style={styles.card}>
+              <VStack space="sm">
+                <Text size="sm" style={styles.inputLabel}>Deep Breaths Recovery</Text>
+                <Input size="md">
+                  <InputField
+                    keyboardType="number-pad"
+                    value={config.deepBreathsRecovery?.toString() || DEFAULT_CONFIG.deepBreathsRecovery.toString()}
+                    onChangeText={(text) => setConfig({ ...config, deepBreathsRecovery: parseInt(text) || DEFAULT_CONFIG.deepBreathsRecovery })}
+                  />
+                </Input>
+              </VStack>
+            </Box>
+          </VStack>
+        </VStack>
+      </ScrollView>
+    </Box>
   );
 }
 
@@ -98,7 +243,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -108,49 +252,58 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   backButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  backText: {
     fontSize: 16,
     color: '#3b82f6',
     fontWeight: '500',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  saveButton: {
-    fontSize: 16,
-    color: '#3b82f6',
-    fontWeight: '600',
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 20,
+    paddingBottom: 40,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 16,
+    marginBottom: 4,
   },
-  setting: {
+  card: {
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  input: {
-    fontSize: 16,
+  cardLabel: {
     color: '#1f2937',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 12,
+  },
+  watchRow: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  watchInfo: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  description: {
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  dataTypes: {
+    paddingTop: 4,
+  },
+  dataTypeLabel: {
+    color: '#4b5563',
+  },
+  lungIcon: {
+    fontSize: 16,
+  },
+  inputLabel: {
+    color: '#6b7280',
+    fontWeight: '500',
   },
 });

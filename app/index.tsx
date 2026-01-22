@@ -1,33 +1,54 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import BreathingProtocol from '../components/BreathingProtocol';
+
+// Gluestack UI Components
+import {
+  Box,
+  HStack,
+  Heading,
+  Button,
+  ButtonText,
+  HistoryIcon,
+  SettingsIcon,
+} from '../components/ui';
 
 export default function IndexScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Breathing App</Text>
-        <View style={styles.navButtons}>
-          <TouchableOpacity
-            style={styles.navButton}
+    <Box style={styles.container}>
+      {/* Header */}
+      <HStack style={styles.header}>
+        <Heading size="xl">Breathing App</Heading>
+        <HStack space="sm">
+          <Button
+            action="default"
+            variant="outline"
+            size="sm"
             onPress={() => router.push('/history')}
-          >
-            <Text style={styles.navButtonText}>History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={styles.navButton}
-            onPress={() => router.push('/settings')}
           >
-            <Text style={styles.navButtonText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <HistoryIcon color="#4b5563" width={18} height={18} />
+            <ButtonText style={styles.navButtonText}>History</ButtonText>
+          </Button>
+          <Button
+            action="default"
+            variant="outline"
+            size="sm"
+            onPress={() => router.push('/settings')}
+            style={styles.navButton}
+          >
+            <SettingsIcon color="#4b5563" width={18} height={18} />
+            <ButtonText style={styles.navButtonText}>Settings</ButtonText>
+          </Button>
+        </HStack>
+      </HStack>
 
+      {/* Main Content */}
       <BreathingProtocol />
-    </View>
+    </Box>
   );
 }
 
@@ -37,7 +58,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -46,24 +66,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  navButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   navButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
     borderRadius: 8,
+    gap: 6,
   },
   navButtonText: {
     fontSize: 14,
-    color: #4b5563',
+    color: '#4b5563',
     fontWeight: '500',
   },
 });

@@ -15,13 +15,23 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.breathingapp.app",
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": ["health-records"]
+      },
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Read heart rate and oxygen saturation during breathing exercises",
+        "NSHealthUpdateUsageDescription": "We do not write health data"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.breathingapp.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
