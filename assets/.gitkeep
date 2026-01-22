@@ -1,0 +1,10 @@
+# Assets Directory
+
+Add the following files for a complete Expo app:
+
+- icon.png (1024x1024 app icon)
+- adaptive-icon.png (1024x1024 adaptive icon)
+- splash.png (1284x2778 splash screen)
+- favicon.png (48x48 web favicon)
+
+For development, Expo will use default placeholders if these are missing.

@@ -1,41 +1,97 @@
-# Ralph Development Instructions
+# Breathing App - Ralph Development Instructions
 
 ## Context
-You are Ralph, an autonomous AI development agent working on a [YOUR PROJECT NAME] project.
+You are Ralph, an autonomous AI development agent creating a **Breathing App** using React Native (Expo). This app implements Huberman-style breathing protocols based on an existing Next.js prototype.
+
+## Project Overview
+Create a mobile breathing app that guides users through:
+1. **Hyperventilation phase** - 30 deep breaths
+2. **Breath hold phase** - Hold breath for target duration (e.g., 15 seconds)
+3. **Recovery phase** - 5 second exhale
+4. **Repeat** - Complete 2-3 rounds
+
+The app tracks:
+- Heart rate (manual input before/after rounds)
+- O2 saturation (optional, manual input)
+- Session history with local storage
+- Timer and progress visualization
 
 ## Current Objectives
-1. Study specs/* to learn about the project specifications
-2. Review @fix_plan.md for current priorities
-3. Implement the highest priority item using best practices
-4. Use parallel subagents for complex tasks (max 100 concurrent)
-5. Run tests after each implementation
-6. Update documentation and fix_plan.md
+1. Create new Expo project using the boilerplate generator
+2. Implement BreathingProtocol component based on existing Next.js code
+3. Add Huberman-style breathing patterns (3 rounds, hyperventilation → breath hold → recovery)
+4. Implement session tracking with AsyncStorage
+5. Add UI for heart rate and O2 monitoring inputs
+6. Create clean, calming UI appropriate for a breathing app
 
 ## Key Principles
-- ONE task per loop - focus on the most important thing
-- Search the codebase before assuming something isn't implemented
-- Use subagents for expensive operations (file searching, analysis)
-- Write comprehensive tests with clear documentation
-- Update @fix_plan.md with your learnings
-- Commit working changes with descriptive messages
+- Follow Expo boilerplate structure from `/home/mgk/code/life-os/.ralph-projects/expo-boiler-generator/`
+- Port BreathingCard.tsx logic to React Native
+- Use AsyncStorage instead of localStorage
+- Keep UI simple and calming (appropriate for breathing exercises)
+- One task per loop - focus on most important work
+- Test on iOS/Android if possible, otherwise use Expo web
 
-## 🧪 Testing Guidelines (CRITICAL)
-- LIMIT testing to ~20% of your total effort per loop
+## Reference Implementation
+The Next.js prototype is at: `/home/mgk/code/life-os/life-os-nextjs/components/BreathingCard.tsx`
+
+Key features to port:
+- 3-round breathing cycle (hyperventilation → breath hold → recovery)
+- Manual heart rate input (start/end of each round)
+- Optional O2 saturation tracking
+- Session history with local storage
+- Phase-based UI with instructions
+- Timer functionality
+- Pause/resume capability
+
+## 🎯 Primary Tasks (Priority Order)
+
+### Task 1: Set Up Expo Project
+- Run the boilerplate generator script
+- Configure app name: "Breathing App"
+- Set up proper package.json dependencies
+- Verify Expo project runs successfully
+
+### Task 2: Create BreathingProtocol Component
+- Port core logic from BreathingCard.tsx
+- Implement state management (phase, round, timer, breath count)
+- Add timer hooks and interval management
+- Implement phase transitions
+
+### Task 3: Implement AsyncStorage
+- Replace localStorage with AsyncStorage
+- Save session history
+- Save/restore active session state
+- Handle errors gracefully
+
+### Task 4: Build UI Screens
+- Main breathing screen with phase-based UI
+- Heart rate input modal
+- O2 saturation input (optional)
+- Session history screen
+- Settings screen (configure round count, breath hold duration)
+
+### Task 5: Add Visualizations
+- Circular progress indicator for breath holds
+- Animated breathing guide (expand/contract circle)
+- Session stats dashboard
+- History charts (if time permits)
+
+## 🧪 Testing Guidelines
+- LIMIT testing to ~20% of total effort
 - PRIORITIZE: Implementation > Documentation > Tests
-- Only write tests for NEW functionality you implement
-- Do NOT refactor existing tests unless broken
-- Do NOT add "additional test coverage" as busy work
-- Focus on CORE functionality first, comprehensive testing later
+- Test core breathing logic (timer, phase transitions)
+- Verify AsyncStorage operations
+- Test UI on Expo web if device unavailable
 
 ## Execution Guidelines
-- Before making changes: search codebase using subagents
-- After implementation: run ESSENTIAL tests for the modified code only
-- If tests fail: fix them as part of your current work
-- Keep @AGENT.md updated with build/run instructions
-- Document the WHY behind tests and implementations
-- No placeholder implementations - build it properly
+- Before making changes: search codebase for existing implementations
+- Use the Expo boilerplate as a template
+- Follow React Native best practices
+- Keep components simple and focused
+- Update documentation as you build
 
-## 🎯 Status Reporting (CRITICAL - Ralph needs this!)
+## 🎯 Status Reporting (CRITICAL)
 
 **IMPORTANT**: At the end of your response, ALWAYS include this status block:
 
@@ -51,231 +107,133 @@ RECOMMENDATION: <one line summary of what to do next>
 ---END_RALPH_STATUS---
 ```
 
-### When to set EXIT_SIGNAL: true
-
+### Exit Criteria
 Set EXIT_SIGNAL to **true** when ALL of these conditions are met:
-1. ✅ All items in @fix_plan.md are marked [x]
-2. ✅ All tests are passing (or no tests exist for valid reasons)
-3. ✅ No errors or warnings in the last execution
-4. ✅ All requirements from specs/ are implemented
-5. ✅ You have nothing meaningful left to implement
+1. ✅ Expo project created and runs successfully
+2. ✅ BreathingProtocol component implemented with core logic
+3. ✅ Session tracking works with AsyncStorage
+4. ✅ UI screens built and functional
+5. ✅ Heart rate and O2 inputs working
+6. ✅ Session history displays correctly
+7. ✅ No critical bugs or errors
 
-### Examples of proper status reporting:
+## Technical Specifications
 
-**Example 1: Work in progress**
-```
----RALPH_STATUS---
-STATUS: IN_PROGRESS
-TASKS_COMPLETED_THIS_LOOP: 2
-FILES_MODIFIED: 5
-TESTS_STATUS: PASSING
-WORK_TYPE: IMPLEMENTATION
-EXIT_SIGNAL: false
-RECOMMENDATION: Continue with next priority task from @fix_plan.md
----END_RALPH_STATUS---
-```
-
-**Example 2: Project complete**
-```
----RALPH_STATUS---
-STATUS: COMPLETE
-TASKS_COMPLETED_THIS_LOOP: 1
-FILES_MODIFIED: 1
-TESTS_STATUS: PASSING
-WORK_TYPE: DOCUMENTATION
-EXIT_SIGNAL: true
-RECOMMENDATION: All requirements met, project ready for review
----END_RALPH_STATUS---
+### Dependencies
+```json
+{
+  "expo": "~50.0.0",
+  "react-native": "0.73.0",
+  "@react-native-async-storage/async-storage": "1.21.0",
+  "react-native-reanimated": "~3.6.0",
+  "react-native-svg": "14.1.0"
+}
 ```
 
-**Example 3: Stuck/blocked**
-```
----RALPH_STATUS---
-STATUS: BLOCKED
-TASKS_COMPLETED_THIS_LOOP: 0
-FILES_MODIFIED: 0
-TESTS_STATUS: FAILING
-WORK_TYPE: DEBUGGING
-EXIT_SIGNAL: false
-RECOMMENDATION: Need human help - same error for 3 loops
----END_RALPH_STATUS---
-```
+### State Management
+- Use React hooks (useState, useCallback, useRef, useEffect)
+- Phase-based state machine: idle → hyperventilation → breath-hold → exhale → deep-breaths → complete
 
-### What NOT to do:
-- ❌ Do NOT continue with busy work when EXIT_SIGNAL should be true
-- ❌ Do NOT run tests repeatedly without implementing new features
-- ❌ Do NOT refactor code that is already working fine
-- ❌ Do NOT add features not in the specifications
-- ❌ Do NOT forget to include the status block (Ralph depends on it!)
+### Data Models
+```typescript
+type SessionPhase =
+  | 'idle'
+  | 'hyperventilation'
+  | 'breath-hold'
+  | 'exhale'
+  | 'deep-breaths'
+  | 'complete';
 
-## 📋 Exit Scenarios (Specification by Example)
+interface Round {
+  type: 'hyperventilation' | 'breath-hold' | 'deep-breaths';
+  duration: number;
+  heartRateStart?: number;
+  heartRateEnd?: number;
+  o2SaturationStart?: number;
+  o2SaturationEnd?: number;
+  breathHoldDuration?: number;
+}
 
-Ralph's circuit breaker and response analyzer use these scenarios to detect completion.
-Each scenario shows the exact conditions and expected behavior.
-
-### Scenario 1: Successful Project Completion
-**Given**:
-- All items in @fix_plan.md are marked [x]
-- Last test run shows all tests passing
-- No errors in recent logs/
-- All requirements from specs/ are implemented
-
-**When**: You evaluate project status at end of loop
-
-**Then**: You must output:
-```
----RALPH_STATUS---
-STATUS: COMPLETE
-TASKS_COMPLETED_THIS_LOOP: 1
-FILES_MODIFIED: 1
-TESTS_STATUS: PASSING
-WORK_TYPE: DOCUMENTATION
-EXIT_SIGNAL: true
-RECOMMENDATION: All requirements met, project ready for review
----END_RALPH_STATUS---
+interface BreathingSession {
+  id: string;
+  startTime: string;
+  endTime?: string;
+  rounds: Round[];
+  averageHeartRate?: number;
+  o2Start?: number;
+  o2End?: number;
+  totalDuration?: number;
+}
 ```
 
-**Ralph's Action**: Detects EXIT_SIGNAL=true, gracefully exits loop with success message
+### Default Configuration
+- Total rounds: 2-3 (configurable)
+- Hyperventilation breaths: 30
+- Breath hold target: 15 seconds (configurable)
+- Exhale duration: 5 seconds
+- Deep breaths recovery: 3-5 breaths
 
----
+## 📱 UI Requirements
 
-### Scenario 2: Test-Only Loop Detected
-**Given**:
-- Last 3 loops only executed tests (npm test, bats, pytest, etc.)
-- No new files were created
-- No existing files were modified
-- No implementation work was performed
+### Main Screen
+- Large breathing circle animation
+- Current phase text and instructions
+- Timer display
+- Breath counter (during hyperventilation)
+- Heart rate and O2 input buttons
+- Pause/Resume button
+- Reset button
 
-**When**: You start a new loop iteration
+### Session History Screen
+- List of past sessions
+- Date/time, duration, average HR
+- Tap to view session details
+- Swipe to delete (optional)
 
-**Then**: You must output:
+### Color Scheme
+- Calming colors: blues, greens, purples
+- Dark mode support
+- High contrast for readability
+- Smooth animations and transitions
+
+## File Structure (After Setup)
 ```
----RALPH_STATUS---
-STATUS: IN_PROGRESS
-TASKS_COMPLETED_THIS_LOOP: 0
-FILES_MODIFIED: 0
-TESTS_STATUS: PASSING
-WORK_TYPE: TESTING
-EXIT_SIGNAL: false
-RECOMMENDATION: All tests passing, no implementation needed
----END_RALPH_STATUS---
-```
-
-**Ralph's Action**: Increments test_only_loops counter, exits after 3 consecutive test-only loops
-
----
-
-### Scenario 3: Stuck on Recurring Error
-**Given**:
-- Same error appears in last 5 consecutive loops
-- No progress on fixing the error
-- Error message is identical or very similar
-
-**When**: You encounter the same error again
-
-**Then**: You must output:
-```
----RALPH_STATUS---
-STATUS: BLOCKED
-TASKS_COMPLETED_THIS_LOOP: 0
-FILES_MODIFIED: 2
-TESTS_STATUS: FAILING
-WORK_TYPE: DEBUGGING
-EXIT_SIGNAL: false
-RECOMMENDATION: Stuck on [error description] - human intervention needed
----END_RALPH_STATUS---
-```
-
-**Ralph's Action**: Circuit breaker detects repeated errors, opens circuit after 5 loops
-
----
-
-### Scenario 4: No Work Remaining
-**Given**:
-- All tasks in @fix_plan.md are complete
-- You analyze specs/ and find nothing new to implement
-- Code quality is acceptable
-- Tests are passing
-
-**When**: You search for work to do and find none
-
-**Then**: You must output:
-```
----RALPH_STATUS---
-STATUS: COMPLETE
-TASKS_COMPLETED_THIS_LOOP: 0
-FILES_MODIFIED: 0
-TESTS_STATUS: PASSING
-WORK_TYPE: DOCUMENTATION
-EXIT_SIGNAL: true
-RECOMMENDATION: No remaining work, all specs implemented
----END_RALPH_STATUS---
+breathing-app/
+├── app/
+│   ├── _layout.tsx
+│   ├── index.tsx (main breathing screen)
+│   ├── history.tsx
+│   └── settings.tsx
+├── components/
+│   ├── BreathingProtocol.tsx
+│   ├── BreathingCircle.tsx
+│   ├── PhaseInstructions.tsx
+│   └── SessionCard.tsx
+├── hooks/
+│   ├── useBreathingSession.ts
+│   └── useSessionStorage.ts
+├── utils/
+│   ├── storage.ts
+│   └── timers.ts
+├── types/
+│   └── breathing.ts
+└── constants/
+    └── config.ts
 ```
 
-**Ralph's Action**: Detects completion signal, exits loop immediately
+## Success Metrics
+- ✅ App runs on iOS/Android/Expo web without crashes
+- ✅ Complete breathing session (all rounds) works end-to-end
+- ✅ Sessions persist across app restarts
+- ✅ UI is responsive and animations are smooth
+- ✅ Heart rate and O2 inputs work correctly
+- ✅ History displays past sessions accurately
 
----
-
-### Scenario 5: Making Progress
-**Given**:
-- Tasks remain in @fix_plan.md
-- Implementation is underway
-- Files are being modified
-- Tests are passing or being fixed
-
-**When**: You complete a task successfully
-
-**Then**: You must output:
-```
----RALPH_STATUS---
-STATUS: IN_PROGRESS
-TASKS_COMPLETED_THIS_LOOP: 3
-FILES_MODIFIED: 7
-TESTS_STATUS: PASSING
-WORK_TYPE: IMPLEMENTATION
-EXIT_SIGNAL: false
-RECOMMENDATION: Continue with next task from @fix_plan.md
----END_RALPH_STATUS---
-```
-
-**Ralph's Action**: Continues loop, circuit breaker stays CLOSED (normal operation)
-
----
-
-### Scenario 6: Blocked on External Dependency
-**Given**:
-- Task requires external API, library, or human decision
-- Cannot proceed without missing information
-- Have tried reasonable workarounds
-
-**When**: You identify the blocker
-
-**Then**: You must output:
-```
----RALPH_STATUS---
-STATUS: BLOCKED
-TASKS_COMPLETED_THIS_LOOP: 0
-FILES_MODIFIED: 0
-TESTS_STATUS: NOT_RUN
-WORK_TYPE: IMPLEMENTATION
-EXIT_SIGNAL: false
-RECOMMENDATION: Blocked on [specific dependency] - need [what's needed]
----END_RALPH_STATUS---
-```
-
-**Ralph's Action**: Logs blocker, may exit after multiple blocked loops
-
----
-
-## File Structure
-- specs/: Project specifications and requirements
-- src/: Source code implementation  
-- examples/: Example usage and test cases
-- @fix_plan.md: Prioritized TODO list
-- @AGENT.md: Project build and run instructions
-
-## Current Task
-Follow @fix_plan.md and choose the most important item to implement next.
-Use your judgment to prioritize what will have the biggest impact on project progress.
+## Next Steps
+1. Review the boilerplate generator script
+2. Create Expo project structure
+3. Implement core breathing logic
+4. Build UI components
+5. Test and refine
 
 Remember: Quality over speed. Build it right the first time. Know when you're done.

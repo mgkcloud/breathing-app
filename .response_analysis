@@ -1,0 +1,17 @@
+{
+  "loop_number": 26,
+  "timestamp": "2026-01-21T14:14:09+00:00",
+  "output_file": "logs/claude_output_2026-01-22_01-12-27.log",
+  "output_format": "text",
+  "analysis": {
+    "has_completion_signal": true,
+    "is_test_only": false,
+    "is_stuck": false,
+    "has_progress": true,
+    "files_modified": 3,
+    "confidence_score": 30,
+    "exit_signal": false,
+    "work_summary": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":84073,\"duration_api_ms\":82983,\"n",
+    "output_length": 4461
+  }
+}
